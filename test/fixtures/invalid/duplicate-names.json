@@ -1,0 +1,26 @@
+{
+  "name": "Duplicate Names Workflow",
+  "active": false,
+  "nodes": [
+    {
+      "id": "a1b2c3d4-0000-0000-0000-000000000009",
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "parameters": {}
+    },
+    {
+      "id": "b2c3d4e5-0000-0000-0000-000000000010",
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [500, 300],
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "HTTP Request": {"main": [[{"node": "HTTP Request", "type": "main", "index": 0}]]}
+  },
+  "settings": {}
+}

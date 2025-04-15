@@ -1,0 +1,35 @@
+{
+  "name": "Simple Valid Workflow",
+  "active": false,
+  "nodes": [
+    {
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "parameters": {
+        "path": "test-webhook",
+        "httpMethod": "POST"
+      }
+    },
+    {
+      "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+      "name": "Set Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 4,
+      "position": [500, 300],
+      "parameters": {
+        "values": {
+          "string": [{"name": "status", "value": "processed"}]
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{"node": "Set Data", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {}
+}

@@ -1,0 +1,17 @@
+{
+  "name": "Instance ID Workflow",
+  "active": false,
+  "meta": {"instanceId": "abc123def456"},
+  "nodes": [
+    {
+      "id": "a1b2c3d4-0000-0000-0000-000000000005",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "parameters": {}
+    }
+  ],
+  "connections": {},
+  "settings": {}
+}

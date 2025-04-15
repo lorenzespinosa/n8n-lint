@@ -1,0 +1,34 @@
+{
+  "name": "Orphaned Node Workflow",
+  "active": false,
+  "nodes": [
+    {
+      "id": "a1b2c3d4-0000-0000-0000-000000000006",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "parameters": {}
+    },
+    {
+      "id": "b2c3d4e5-0000-0000-0000-000000000007",
+      "name": "Connected Node",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 4,
+      "position": [500, 300],
+      "parameters": {}
+    },
+    {
+      "id": "c3d4e5f6-0000-0000-0000-000000000008",
+      "name": "Orphan",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 3,
+      "position": [800, 300],
+      "parameters": {"jsCode": "return items;"}
+    }
+  ],
+  "connections": {
+    "Webhook": {"main": [[{"node": "Connected Node", "type": "main", "index": 0}]]}
+  },
+  "settings": {}
+}

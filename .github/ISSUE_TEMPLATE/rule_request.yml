@@ -1,0 +1,74 @@
+name: New Rule Request
+description: Suggest a new lint rule for n8n-lint
+title: "[Rule]: "
+labels: ["enhancement", "new-rule"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Suggest a new rule for n8n-lint. Good rules catch real problems that affect security, reliability, or maintainability of n8n workflows.
+
+  - type: input
+    id: rule-name
+    attributes:
+      label: Rule name
+      description: Short name for what the rule checks.
+      placeholder: "Detect unused sticky notes"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What should this rule detect?
+      description: Describe the pattern or problem this rule would flag.
+      placeholder: |
+        This rule should flag workflows that contain...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      description: Which category does this rule belong to?
+      options:
+        - Schema (structural validation)
+        - Security (credential/identity leaks)
+        - Best Practice (workflow hygiene)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Suggested severity
+      options:
+        - error (blocks CI)
+        - warning (informational)
+    validations:
+      required: true
+
+  - type: textarea
+    id: example
+    attributes:
+      label: Example workflow JSON
+      description: Provide a minimal workflow JSON that this rule should flag. Remove any real credentials.
+      render: json
+    validations:
+      required: false
+
+  - type: textarea
+    id: rationale
+    attributes:
+      label: Why is this rule useful?
+      description: What problem does it prevent? Have you encountered this issue in practice?
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: willing
+    attributes:
+      label: Would you be willing to submit a PR for this rule?
+      options:
+        - label: Yes, I'd like to implement this rule
