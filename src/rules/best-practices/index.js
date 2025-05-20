@@ -114,4 +114,6 @@ const duplicateNames = {
   },
 };
 
-export default [activeFlag, deprecatedNodes, orphanedNodes, duplicateNames];
+import advancedRules from './advanced.js';
+
+export default [activeFlag, deprecatedNodes, orphanedNodes, duplicateNames, ...advancedRules];

@@ -7,6 +7,7 @@ export class Linter {
   constructor(options = {}) {
     this.rules = [...schemaRules, ...securityRules, ...bestPracticeRules];
     this.disabledRules = new Set(options.disabledRules || []);
+    this.severityOverrides = options.severityOverrides || new Map();
   }
 
   /**
@@ -36,7 +37,7 @@ export class Linter {
         if (Array.isArray(issues)) {
           results.push(...issues.map(issue => ({
             ruleId: rule.id,
-            severity: issue.severity || rule.severity,
+            severity: this.severityOverrides.get(rule.id) || issue.severity || rule.severity,
             message: issue.message,
             node: issue.node || null,
             fix: issue.fix || null,

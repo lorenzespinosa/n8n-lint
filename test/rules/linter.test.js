@@ -112,4 +112,20 @@ describe('n8n-lint', () => {
       assert.equal(bp01.length, 0, 'BP-01 should be disabled');
     });
   });
+
+  describe('BP-05: missing error handling', () => {
+    it('should flag HTTP Request without error handling', () => {
+      const linter = new Linter();
+      const result = linter.lint(fixtures('invalid/no-error-handling.json'));
+      const bp05 = result.results.filter(r => r.ruleId === 'BP-05');
+      assert.ok(bp05.length >= 1);
+    });
+
+    it('should pass HTTP Request with continueOnFail', () => {
+      const linter = new Linter();
+      const result = linter.lint(fixtures('valid/with-error-handling.json'));
+      const bp05 = result.results.filter(r => r.ruleId === 'BP-05');
+      assert.equal(bp05.length, 0);
+    });
+  });
 });
