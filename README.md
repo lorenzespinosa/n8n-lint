@@ -1,10 +1,10 @@
 # n8n-lint
 
-[![npm version](https://img.shields.io/npm/v/n8n-lint.svg)](https://www.npmjs.com/package/n8n-lint)
-[![CI](https://github.com/example/n8n-lint/actions/workflows/ci.yml/badge.svg)](https://github.com/example/n8n-lint/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org/)
+[![Tests](https://img.shields.io/badge/tests-13%20passing-brightgreen)]()
 
-**Static analysis for n8n workflow JSON files.** Catch credential leaks, deprecated nodes, schema errors, and best-practice violations before they hit production.
+**Static analysis for n8n workflow JSON files.** Catch credential leaks, deprecated nodes, schema errors, and best-practice violations before they hit production. 16 rules, zero config required, CI-ready.
 
 ---
 
@@ -24,6 +24,9 @@ npm install -g n8n-lint
 
 # Project-local
 npm install --save-dev n8n-lint
+
+# No install (npx)
+npx n8n-lint ./workflows/
 ```
 
 ## Usage
@@ -35,55 +38,84 @@ n8n-lint workflow.json
 # Lint a directory (recursive)
 n8n-lint ./workflows/
 
-# Lint multiple paths
-n8n-lint workflow1.json ./more-workflows/
+# Auto-fix safe issues (strip instanceId, set active:false)
+n8n-lint --fix ./workflows/
 
-# Disable specific rules
-n8n-lint --disable SEC-02,BP-01 .
+# JSON output for CI/scripting
+n8n-lint --format json ./workflows/
+
+# Errors only (quiet mode)
+n8n-lint --quiet ./workflows/
+
+# Custom config
+n8n-lint --config .n8nlintrc.json ./workflows/
 ```
 
 ### Sample Output
 
 ```
 workflows/intake-form.json
-  SEC-01  error    Possible credential leak: Bearer token found in node "HTTP Request"
-  BP-02   warning  Deprecated node type "Function" in node "My Function" - use Code node instead
+  ✗ [SEC-01] Possible Bearer token detected: "Bearer sk-abc123..."
+  ✗ [SEC-02] meta.instanceId found: "abc123" — strip before sharing
+    Fix: Remove meta.instanceId from the workflow JSON
+  ⚠ [BP-02] Node "My Function" uses deprecated "n8n-nodes-base.function" — use "n8n-nodes-base.code" instead
+  ⚠ [BP-05] Node "API Call" is an HTTP Request without error handling
 
-workflows/notify-slack.json
-  BP-03   warning  Orphaned node "Debug Set" is not connected to any other node
+workflows/valid-workflow.json
+  ✓
 
-  3 files checked | 1 error | 2 warnings
+2 files checked · 2 errors · 2 warnings
 ```
 
 ## Rule Reference
 
-| ID | Severity | Description | Fixable |
-|---|---|---|---|
-| **SCHEMA-01** | error | Invalid JSON syntax | -- |
-| **SCHEMA-02** | error | Missing required top-level fields (`name`, `nodes`, `connections`) | -- |
-| **SCHEMA-03** | error | Missing required node fields (`id`, `name`, `type`, `position`, `parameters`) | -- |
-| **SCHEMA-04** | error | Connection references a node that does not exist | -- |
-| **SEC-01** | error | Hardcoded credentials or API keys detected in node parameters | -- |
-| **SEC-02** | warning | `meta.instanceId` present - leaks server identity | auto |
-| **SEC-03** | warning | Root-level `id` field present - leaks internal database ID | auto |
-| **SEC-04** | warning | URL contains query-string tokens or API keys | -- |
-| **SEC-05** | warning | Credential name references appear in exported JSON | -- |
-| **BP-01** | warning | `active: true` should not be committed to version control | auto |
-| **BP-02** | warning | Deprecated node type (Function, FunctionItem, Merge v1) | -- |
-| **BP-03** | warning | Orphaned node not connected to any other node | -- |
-| **BP-04** | warning | Duplicate node names within the same workflow | -- |
-
-**Fixable** = `auto` means a future `--fix` flag will handle it automatically.
+| ID | Severity | Category | Description | Fixable |
+|---|---|---|---|---|
+| **SCHEMA-01** | error | Schema | Invalid JSON syntax | — |
+| **SCHEMA-02** | error | Schema | Missing required top-level fields (`name`, `nodes`, `connections`, `active`) | — |
+| **SCHEMA-03** | error | Schema | Missing required node fields (`id`, `name`, `type`, `typeVersion`, `position`) | — |
+| **SCHEMA-04** | error | Schema | Connection references a non-existent node | — |
+| **SEC-01** | error | Security | Hardcoded credentials, API keys, or tokens in node parameters | — |
+| **SEC-02** | error | Security | `meta.instanceId` present — leaks server identity | ✅ `--fix` |
+| **SEC-03** | warning | Security | Root-level `id` field — instance-specific, not portable | ✅ `--fix` |
+| **SEC-04** | error | Security | URL contains auth tokens in query parameters | — |
+| **SEC-05** | warning | Security | Credential names/IDs leak internal naming | — |
+| **BP-01** | error | Best Practice | `active: true` — templates should be `false` | ✅ `--fix` |
+| **BP-02** | warning | Best Practice | Deprecated `Function` node — use `Code` node | — |
+| **BP-03** | warning | Best Practice | Orphaned node with no connections | — |
+| **BP-04** | error | Best Practice | Duplicate node names in same workflow | — |
+| **BP-05** | warning | Best Practice | HTTP Request without error handling (`continueOnFail` or error workflow) | — |
+| **BP-06** | warning | Best Practice | Large workflow (>50 nodes) — decompose into sub-workflows | — |
+| **BP-07** | warning | Best Practice | Potential infinite loop — cycle detected without IF/Switch termination | — |
 
 ## Configuration
 
-> Configuration file support (`.n8nlintrc.json`) is planned for v2.
+Create `.n8nlintrc.json` in your project root:
 
-Currently, rules can be disabled via the `--disable` CLI flag:
-
-```bash
-n8n-lint --disable SEC-02,SEC-03 ./workflows/
+```json
+{
+  "rules": {
+    "SEC-03": "off",
+    "SEC-05": "off",
+    "BP-03": "warn",
+    "BP-06": "error"
+  }
+}
 ```
+
+Values: `"error"`, `"warn"` / `"warning"`, `"off"` / `false`
+
+## Auto-Fix
+
+`--fix` safely corrects these issues in-place:
+
+| Issue | Fix Applied |
+|-------|------------|
+| `meta.instanceId` present | Removed |
+| Root-level `id` present | Removed |
+| `active: true` | Set to `false` |
+
+Only non-destructive fixes are applied. Other rules require manual correction.
 
 ## CI Integration
 
@@ -105,7 +137,15 @@ jobs:
       - run: npx n8n-lint ./workflows/
 ```
 
-The process exits with code `1` when errors are found, which fails the CI job automatically.
+Exits with code `1` on errors — fails the CI job automatically.
+
+### JSON Output for CI
+
+```bash
+n8n-lint --format json ./workflows/ > lint-results.json
+```
+
+Returns a JSON array of `{ file, issues: [{ ruleId, severity, message, node, fix }] }`.
 
 ## Exit Codes
 
@@ -119,22 +159,46 @@ The process exits with code `1` when errors are found, which fails the CI job au
 
 ```mermaid
 graph LR
-    A[CLI Entry] --> B[File Discovery]
-    B --> C[JSON Parse]
-    C --> D{Valid JSON?}
-    D -- No --> E[SCHEMA-01 Error]
-    D -- Yes --> F[Schema Rules]
-    F --> G[Security Rules]
-    G --> H[Best Practice Rules]
-    H --> I[Formatter]
-    I --> J[Terminal Output]
-    J --> K[Exit Code]
+    A[CLI Entry] --> B[Config Loader]
+    B --> C[File Discovery]
+    C --> D[JSON Parse]
+    D --> E{Valid JSON?}
+    E -- No --> F[SCHEMA-01]
+    E -- Yes --> G{n8n Workflow?}
+    G -- No --> H[Skip]
+    G -- Yes --> I[Schema Rules]
+    I --> J[Security Rules]
+    J --> K[Best Practice Rules]
+    K --> L{--fix?}
+    L -- Yes --> M[Auto-Fix]
+    L -- No --> N[Reporter]
+    M --> N
+    N --> O{--format json?}
+    O -- Yes --> P[JSON Output]
+    O -- No --> Q[Colored Terminal]
+    P --> R[Exit Code]
+    Q --> R
 ```
 
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add new rules, run tests, and submit PRs.
 
+### Adding a New Rule
+
+1. Create `src/rules/<category>/your-rule.js`
+2. Export `{ id, severity, description, check(workflow) }`
+3. `check()` returns `[{ message, node?, fix? }]`
+4. Add to category's `index.js` export array
+5. Create test fixtures in `test/fixtures/valid/` and `test/fixtures/invalid/`
+6. Add test case in `test/rules/linter.test.js`
+
+## Related Projects
+
+- [n8n-error-handling-pattern](https://github.com/lorenzespinosa/n8n-error-handling-pattern) — Error handling templates this linter validates
+- [n8n-legal-ops-templates](https://github.com/lorenzespinosa/n8n-legal-ops-templates) — Legal ops workflow templates
+- [n8n-ai-agent-delegator](https://github.com/lorenzespinosa/n8n-ai-agent-delegator) — Multi-agent AI system templates
+
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE) © 2025 Lorenz Espinosa
