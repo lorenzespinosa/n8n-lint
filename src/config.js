@@ -20,7 +20,12 @@ export function loadConfig(configPath) {
   try {
     const content = readFileSync(searchPath, 'utf-8');
     const userConfig = JSON.parse(content);
-    return { ...DEFAULT_CONFIG, ...userConfig };
+    // HIGH-5 fix: Validate config schema before merging
+    if (userConfig.rules && (typeof userConfig.rules !== 'object' || Array.isArray(userConfig.rules))) {
+      console.error('Warning: "rules" in config must be an object, ignoring');
+      userConfig.rules = {};
+    }
+    return { ...DEFAULT_CONFIG, ...userConfig, rules: { ...DEFAULT_CONFIG.rules, ...(userConfig.rules || {}) } };
   } catch (err) {
     console.error(`Warning: Failed to parse config file: ${err.message}`);
     return { ...DEFAULT_CONFIG };
@@ -33,7 +38,9 @@ export function loadConfig(configPath) {
  */
 export function getDisabledRules(config) {
   const disabled = new Set();
-  for (const [ruleId, setting] of Object.entries(config.rules || {})) {
+  const rulesConfig = config.rules;
+  if (!rulesConfig || typeof rulesConfig !== 'object' || Array.isArray(rulesConfig)) return disabled;
+  for (const [ruleId, setting] of Object.entries(rulesConfig)) {
     if (setting === 'off' || setting === false) {
       disabled.add(ruleId);
     }
@@ -46,7 +53,9 @@ export function getDisabledRules(config) {
  */
 export function getSeverityOverrides(config) {
   const overrides = new Map();
-  for (const [ruleId, setting] of Object.entries(config.rules || {})) {
+  const rulesConfig = config.rules;
+  if (!rulesConfig || typeof rulesConfig !== 'object' || Array.isArray(rulesConfig)) return overrides;
+  for (const [ruleId, setting] of Object.entries(rulesConfig)) {
     if (setting === 'warn' || setting === 'warning') {
       overrides.set(ruleId, 'warning');
     } else if (setting === 'error') {

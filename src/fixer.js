@@ -1,4 +1,7 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, renameSync } from 'node:fs';
+import { join, basename } from 'node:path';
+import { tmpdir } from 'node:os';
+import { isN8nWorkflow } from './utils.js';
 
 /**
  * Apply safe auto-fixes to a workflow JSON file.
@@ -15,6 +18,11 @@ export function fixFile(filePath) {
     data = JSON.parse(content);
   } catch {
     return { fixed: false, changes: [], error: 'Invalid JSON' };
+  }
+
+  // MEDIUM-4 fix: Skip non-n8n JSON files (prevents corrupting package.json etc.)
+  if (!isN8nWorkflow(data)) {
+    return { fixed: false, changes: [], error: null };
   }
 
   const changes = [];
@@ -40,8 +48,11 @@ export function fixFile(filePath) {
     changes.push('Set active: false');
   }
 
+  // HIGH-3 fix: Atomic write via temp file + rename (prevents data loss on interrupted write)
   if (changes.length > 0) {
-    writeFileSync(filePath, JSON.stringify(data, null, 2) + '\n', 'utf-8');
+    const tmpPath = join(tmpdir(), `n8n-lint-${basename(filePath)}-${Date.now()}.tmp`);
+    writeFileSync(tmpPath, JSON.stringify(data, null, 2) + '\n', 'utf-8');
+    renameSync(tmpPath, filePath);
   }
 
   return { fixed: changes.length > 0, changes };

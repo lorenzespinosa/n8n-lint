@@ -1,6 +1,7 @@
 /**
  * Best practice rules for n8n workflows.
  */
+import advancedRules from './advanced.js';
 
 /** BP-01: active should be false for templates */
 const activeFlag = {
@@ -113,7 +114,5 @@ const duplicateNames = {
     return issues;
   },
 };
-
-import advancedRules from './advanced.js';
 
 export default [activeFlag, deprecatedNodes, orphanedNodes, duplicateNames, ...advancedRules];

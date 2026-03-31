@@ -1,15 +1,30 @@
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync, lstatSync } from 'node:fs';
 import { resolve, extname } from 'node:path';
+
+const MAX_DEPTH = 20;
 
 /**
  * Recursively discover all .json files from a path argument.
  * If path is a file, return [path]. If directory, recurse.
- * Skips node_modules, .git, and hidden directories.
+ * Skips node_modules, .git, hidden directories, and symlinks.
+ * Has a depth limit to prevent stack overflow on deep/circular trees.
  */
-export function discoverFiles(pathArg) {
-  const resolved = resolve(pathArg);
-  const stat = statSync(resolved, { throwIfNoEntry: false });
+export function discoverFiles(pathArg, _depth = 0) {
+  if (_depth > MAX_DEPTH) return [];
 
+  const resolved = resolve(pathArg);
+
+  // Skip symlinks to prevent infinite recursion from symlink cycles
+  try {
+    const lstat = lstatSync(resolved, { throwIfNoEntry: false });
+    if (!lstat) throw new Error(`Path not found: ${pathArg}`);
+    if (lstat.isSymbolicLink()) return [];
+  } catch (err) {
+    if (err.message.startsWith('Path not found')) throw err;
+    return [];
+  }
+
+  const stat = statSync(resolved, { throwIfNoEntry: false });
   if (!stat) {
     throw new Error(`Path not found: ${pathArg}`);
   }
@@ -25,7 +40,7 @@ export function discoverFiles(pathArg) {
     for (const entry of entries) {
       if (entry.startsWith('.') || entry === 'node_modules') continue;
       const fullPath = resolve(resolved, entry);
-      results.push(...discoverFiles(fullPath));
+      results.push(...discoverFiles(fullPath, _depth + 1));
     }
 
     return results;

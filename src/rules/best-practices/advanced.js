@@ -2,6 +2,9 @@
  * Advanced best practice rules for n8n workflows.
  */
 
+const LARGE_WORKFLOW_THRESHOLD = 50;
+const MAX_DFS_DEPTH = 500;
+
 /** BP-05: Missing error handling on HTTP Request nodes */
 const missingErrorHandling = {
   id: 'BP-05',
@@ -37,12 +40,12 @@ const missingErrorHandling = {
 const largeWorkflow = {
   id: 'BP-06',
   severity: 'warning',
-  description: 'Workflows with >50 nodes should be decomposed into sub-workflows',
+  description: `Workflows with >${LARGE_WORKFLOW_THRESHOLD} nodes should be decomposed into sub-workflows`,
   check(workflow) {
     const nodeCount = (workflow.nodes || []).length;
-    if (nodeCount > 50) {
+    if (nodeCount > LARGE_WORKFLOW_THRESHOLD) {
       return [{
-        message: `Workflow has ${nodeCount} nodes (threshold: 50) — consider breaking into sub-workflows using Execute Workflow nodes`,
+        message: `Workflow has ${nodeCount} nodes (threshold: ${LARGE_WORKFLOW_THRESHOLD}) — consider breaking into sub-workflows using Execute Workflow nodes`,
       }];
     }
     return [];
@@ -73,15 +76,24 @@ const infiniteLoopRisk = {
       adj.set(source, targets);
     }
 
-    // Detect cycles using DFS
+    // HIGH-4 fix: Corrected DFS — visited marked post-order, cycle dedup, depth guard
     const visited = new Set();
     const inStack = new Set();
+    const reportedCycles = new Set();
 
     function dfs(node, path) {
+      // MEDIUM-5 fix: Depth guard to prevent stack overflow
+      if (path.length > MAX_DFS_DEPTH) return;
+
       if (inStack.has(node)) {
-        // Found a cycle — check if there's an IF/Switch node in the cycle (termination condition)
         const cycleStart = path.indexOf(node);
         const cycle = path.slice(cycleStart);
+
+        // Deduplicate cycles by sorted signature
+        const key = [...cycle].sort().join(',');
+        if (reportedCycles.has(key)) return;
+        reportedCycles.add(key);
+
         const hasTermination = cycle.some(n => {
           const nodeData = nodeMap.get(n);
           return nodeData && (
@@ -101,7 +113,6 @@ const infiniteLoopRisk = {
       }
 
       if (visited.has(node)) return;
-      visited.add(node);
       inStack.add(node);
 
       for (const target of adj.get(node) || []) {
@@ -109,6 +120,7 @@ const infiniteLoopRisk = {
       }
 
       inStack.delete(node);
+      visited.add(node); // Mark fully explored AFTER recursion (post-order)
     }
 
     for (const nodeName of adj.keys()) {
