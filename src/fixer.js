@@ -11,7 +11,12 @@ import { isN8nWorkflow } from './utils.js';
  * - Set active: false (BP-01)
  */
 export function fixFile(filePath) {
-  const content = readFileSync(filePath, 'utf-8');
+  let content;
+  try {
+    content = readFileSync(filePath, 'utf-8');
+  } catch (err) {
+    return { fixed: false, changes: [], error: `Cannot read file: ${err.message}` };
+  }
   let data;
 
   try {
@@ -50,9 +55,13 @@ export function fixFile(filePath) {
 
   // HIGH-3 fix: Atomic write via temp file + rename (prevents data loss on interrupted write)
   if (changes.length > 0) {
-    const tmpPath = join(tmpdir(), `n8n-lint-${basename(filePath)}-${Date.now()}.tmp`);
-    writeFileSync(tmpPath, JSON.stringify(data, null, 2) + '\n', 'utf-8');
-    renameSync(tmpPath, filePath);
+    try {
+      const tmpPath = join(tmpdir(), `n8n-lint-${basename(filePath)}-${Date.now()}.tmp`);
+      writeFileSync(tmpPath, JSON.stringify(data, null, 2) + '\n', 'utf-8');
+      renameSync(tmpPath, filePath);
+    } catch (err) {
+      return { fixed: false, changes: [], error: `Cannot write file: ${err.message}` };
+    }
   }
 
   return { fixed: changes.length > 0, changes };

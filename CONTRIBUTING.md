@@ -5,7 +5,7 @@ Thanks for your interest in improving n8n-lint. This guide covers adding new lin
 ## Development Setup
 
 ```bash
-git clone https://github.com/example/n8n-lint.git
+git clone https://github.com/lorenzespinosa/n8n-lint.git
 cd n8n-lint
 npm install
 npm test
@@ -60,10 +60,12 @@ Add your rule to the category's index file:
 
 ```javascript
 // src/rules/best-practices/index.js
-export { default as bp05 } from './bp-05.js';
+import bp05 from './bp-05.js';
+
+export default [activeFlag, deprecatedNodes, orphanedNodes, duplicateNames, bp05];
 ```
 
-The linter auto-discovers all exported rules from category index files.
+Each category index exports a default array of rule objects. Import your rule and add it to the array.
 
 ### 3. Add test fixtures
 
