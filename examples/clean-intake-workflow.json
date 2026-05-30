@@ -1,0 +1,49 @@
+{
+  "name": "Client Intake → CRM (clean)",
+  "active": false,
+  "nodes": [
+    {
+      "id": "11111111-0000-0000-0000-000000000001",
+      "name": "Intake Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "parameters": {
+        "path": "client-intake",
+        "httpMethod": "POST"
+      }
+    },
+    {
+      "id": "11111111-0000-0000-0000-000000000002",
+      "name": "Validate Fields",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 300],
+      "parameters": {
+        "jsCode": "const { email, phone } = $input.first().json;\nif (!email) throw new Error('Missing email');\nreturn $input.all();"
+      }
+    },
+    {
+      "id": "11111111-0000-0000-0000-000000000003",
+      "name": "Create CRM Contact",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [720, 300],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.example-crm.com/v1/contacts",
+        "authentication": "predefinedCredentialType"
+      }
+    }
+  ],
+  "connections": {
+    "Intake Webhook": {
+      "main": [[{ "node": "Validate Fields", "type": "main", "index": 0 }]]
+    },
+    "Validate Fields": {
+      "main": [[{ "node": "Create CRM Contact", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {}
+}
