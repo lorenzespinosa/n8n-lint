@@ -1,5 +1,21 @@
 # Changelog
 
+All notable changes to this project are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.3.0] - 2025-08-12
+
+### Added
+- GitHub Actions CI workflow (`npm ci` + `npm test` on a Node 18 + 20 matrix) on push/PR to `main`
+- Dedicated test coverage for the 6 previously-untested rules: SCHEMA-03, SEC-03, SEC-04, SEC-05, BP-06, BP-07 (every rule now has a focused test)
+- New fixtures: `node-missing-fields`, `root-id`, `url-token`, `credential-name`, `large-workflow`, `infinite-loop`
+- `examples/` directory with a clean workflow and an intentionally-flawed workflow demonstrating the linter
+- CI status badge in the README
+
+### Changed
+- Test count: 13 → 21
+- Synced `package.json` version with the changelog history
+- Corrected the README sample output to match real linter formatting
+
 ## [1.2.0] - 2025-07-01
 
 ### Added

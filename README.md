@@ -1,8 +1,9 @@
 # n8n-lint
 
+[![CI](https://github.com/lorenzespinosa/n8n-lint/actions/workflows/ci.yml/badge.svg)](https://github.com/lorenzespinosa/n8n-lint/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org/)
-[![Tests](https://img.shields.io/badge/tests-13%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-21%20passing-brightgreen)]()
 
 **Static analysis for n8n workflow JSON files.** Catch credential leaks, deprecated nodes, schema errors, and best-practice violations before they hit production. 16 rules, zero config required, CI-ready.
 
@@ -55,16 +56,28 @@ n8n-lint --config .n8nlintrc.json ./workflows/
 
 ```
 workflows/intake-form.json
-  ✗ [SEC-01] Possible Bearer token detected: "Bearer sk-abc123..."
-  ✗ [SEC-02] meta.instanceId found: "abc123" — strip before sharing
+  ✗ [SEC-01] Possible Bearer token in node "HTTP Request": "Bearer s...[REDACTED]" (HTTP Request)
+  ✗ [SEC-02] meta.instanceId found: "abc123de..." — strip before sharing
     Fix: Remove meta.instanceId from the workflow JSON
-  ⚠ [BP-02] Node "My Function" uses deprecated "n8n-nodes-base.function" — use "n8n-nodes-base.code" instead
-  ⚠ [BP-05] Node "API Call" is an HTTP Request without error handling
+  ⚠ [BP-02] Node "My Function" uses deprecated "n8n-nodes-base.function" — use "n8n-nodes-base.code" instead (My Function)
+  ⚠ [BP-05] Node "API Call" is an HTTP Request without error handling — add continueOnFail, retryOnFail, or set an error workflow (API Call)
 
 workflows/valid-workflow.json
   ✓
 
 2 files checked · 2 errors · 2 warnings
+```
+
+### Try It on the Examples
+
+The [`examples/`](examples/) directory has a clean workflow and an intentionally-flawed one:
+
+```bash
+# Passes — exits 0
+n8n-lint examples/clean-intake-workflow.json
+
+# Fails — 4 errors, 5 warnings across SEC, BP, and schema rules
+n8n-lint examples/flawed-intake-workflow.json
 ```
 
 ## Rule Reference
