@@ -1,0 +1,29 @@
+{
+  "name": "URL Token Workflow",
+  "active": false,
+  "nodes": [
+    {
+      "id": "a1b2c3d4-0000-0000-0000-000000000041",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "parameters": {}
+    },
+    {
+      "id": "b2c3d4e5-0000-0000-0000-000000000042",
+      "name": "Call API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [500, 300],
+      "continueOnFail": true,
+      "parameters": {
+        "url": "https://api.example.com/v1/data?access_token=s3cr3tTokenValue123&page=1"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {"main": [[{"node": "Call API", "type": "main", "index": 0}]]}
+  },
+  "settings": {}
+}

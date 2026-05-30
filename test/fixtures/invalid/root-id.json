@@ -1,0 +1,17 @@
+{
+  "id": "wf_abc123def456",
+  "name": "Root Id Workflow",
+  "active": false,
+  "nodes": [
+    {
+      "id": "a1b2c3d4-0000-0000-0000-000000000031",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "parameters": {}
+    }
+  ],
+  "connections": {},
+  "settings": {}
+}

@@ -37,6 +37,17 @@ describe('n8n-lint', () => {
     });
   });
 
+  describe('SCHEMA-03: node required fields', () => {
+    it('should detect a node missing id and typeVersion', () => {
+      const linter = new Linter();
+      const result = linter.lint(fixtures('invalid/node-missing-fields.json'));
+      const schema03 = result.results.filter(r => r.ruleId === 'SCHEMA-03');
+      assert.ok(schema03.length >= 1, 'Should detect missing node fields');
+      assert.ok(schema03.some(r => r.message.includes('id')));
+      assert.ok(schema03.some(r => r.message.includes('typeVersion')));
+    });
+  });
+
   describe('SCHEMA-04: orphaned connections', () => {
     it('should detect connection to non-existent node', () => {
       const linter = new Linter();
@@ -63,6 +74,38 @@ describe('n8n-lint', () => {
       const sec02 = result.results.filter(r => r.ruleId === 'SEC-02');
       assert.equal(sec02.length, 1);
       assert.ok(sec02[0].message.includes('instanceId'));
+    });
+  });
+
+  describe('SEC-03: root-level id', () => {
+    it('should detect a root-level id field', () => {
+      const linter = new Linter();
+      const result = linter.lint(fixtures('invalid/root-id.json'));
+      const sec03 = result.results.filter(r => r.ruleId === 'SEC-03');
+      assert.equal(sec03.length, 1);
+      assert.equal(sec03[0].severity, 'warning');
+      assert.ok(sec03[0].message.includes('Root-level id'));
+    });
+  });
+
+  describe('SEC-04: auth tokens in URLs', () => {
+    it('should detect a URL with an auth token in the query string', () => {
+      const linter = new Linter();
+      const result = linter.lint(fixtures('invalid/url-token.json'));
+      const sec04 = result.results.filter(r => r.ruleId === 'SEC-04');
+      assert.ok(sec04.length >= 1, 'Should detect URL auth parameter');
+      assert.ok(sec04[0].message.includes('[REDACTED]'), 'Token value should be redacted');
+    });
+  });
+
+  describe('SEC-05: credential name leaks', () => {
+    it('should flag a node with a credential id', () => {
+      const linter = new Linter();
+      const result = linter.lint(fixtures('invalid/credential-name.json'));
+      const sec05 = result.results.filter(r => r.ruleId === 'SEC-05');
+      assert.equal(sec05.length, 1);
+      assert.equal(sec05[0].severity, 'warning');
+      assert.ok(sec05[0].message.includes('credential ID'));
     });
   });
 
@@ -126,6 +169,40 @@ describe('n8n-lint', () => {
       const result = linter.lint(fixtures('valid/with-error-handling.json'));
       const bp05 = result.results.filter(r => r.ruleId === 'BP-05');
       assert.equal(bp05.length, 0);
+    });
+  });
+
+  describe('BP-06: large workflow', () => {
+    it('should flag a workflow with more than 50 nodes', () => {
+      const linter = new Linter();
+      const result = linter.lint(fixtures('invalid/large-workflow.json'));
+      const bp06 = result.results.filter(r => r.ruleId === 'BP-06');
+      assert.equal(bp06.length, 1);
+      assert.ok(bp06[0].message.includes('52 nodes'));
+    });
+
+    it('should not flag a small workflow', () => {
+      const linter = new Linter();
+      const result = linter.lint(fixtures('valid/simple-workflow.json'));
+      const bp06 = result.results.filter(r => r.ruleId === 'BP-06');
+      assert.equal(bp06.length, 0);
+    });
+  });
+
+  describe('BP-07: infinite loop risk', () => {
+    it('should flag a cycle with no IF/Switch/Filter termination', () => {
+      const linter = new Linter();
+      const result = linter.lint(fixtures('invalid/infinite-loop.json'));
+      const bp07 = result.results.filter(r => r.ruleId === 'BP-07');
+      assert.ok(bp07.length >= 1, 'Should detect potential infinite loop');
+      assert.ok(bp07[0].message.includes('infinite loop'));
+    });
+
+    it('should not flag an acyclic workflow', () => {
+      const linter = new Linter();
+      const result = linter.lint(fixtures('valid/simple-workflow.json'));
+      const bp07 = result.results.filter(r => r.ruleId === 'BP-07');
+      assert.equal(bp07.length, 0);
     });
   });
 });
