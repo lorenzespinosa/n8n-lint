@@ -11,7 +11,7 @@
 ## Quick Start
 
 ```bash
-npx n8n-lint .
+npx github:lorenzespinosa/n8n-lint .
 ```
 
 That's it. Scans all `.json` workflow files in the current directory and prints results.
@@ -20,13 +20,13 @@ That's it. Scans all `.json` workflow files in the current directory and prints 
 
 ```bash
 # Global
-npm install -g n8n-lint
+npm install -g github:lorenzespinosa/n8n-lint
 
 # Project-local
-npm install --save-dev n8n-lint
+npm install --save-dev github:lorenzespinosa/n8n-lint
 
 # No install (npx)
-npx n8n-lint ./workflows/
+npx github:lorenzespinosa/n8n-lint ./workflows/
 ```
 
 ## Usage
@@ -134,7 +134,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npx n8n-lint ./workflows/
+      - run: npx github:lorenzespinosa/n8n-lint ./workflows/
 ```
 
 Exits with code `1` on errors — fails the CI job automatically.
