@@ -219,10 +219,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add new rules, run tests, and 
 ---
 
 <!-- hire-cta -->
-## 👋 Built by Lorenz Espinosa
+## Built by Lorenz Espinosa
 
-I design and ship production automation for ops-heavy businesses — webhook-driven, AI-powered systems with validation, retries, and audit logging baked in. **50+ processes automated · $800K+ saved.**
+I help teams connect the tools they already use and make automations easier to test, troubleshoot and maintain. This repository is a public technical example, not a statement of any client's systems or results.
 
-**Want something like this built for your team?**
-
-[![See more work](https://img.shields.io/badge/See%20more%20work-0d1117?style=flat-square&logo=github&logoColor=7aa2f7)](https://github.com/lorenzespinosa) &nbsp;[![Start a project](https://img.shields.io/badge/Start%20a%20project%20%E2%86%92-0d1117?style=for-the-badge&logo=gmail&logoColor=9ece6a)](mailto:renzespinosa13@gmail.com?subject=Automation%20project%20inquiry&body=Hi%20Lorenz%2C%0A%0AGoal%3A%0ASystems%2Ftools%20involved%3A%0ATimeline%3A%0A) &nbsp;[![Connect on LinkedIn](https://img.shields.io/badge/Connect-0d1117?style=flat-square&logo=linkedin&logoColor=7aa2f7)](https://www.linkedin.com/in/lorenz-leslie-espinosa/)
+**Have a workflow that needs attention?** [Email me](mailto:renzespinosa13@gmail.com?subject=Workflow%20integration%20inquiry) with the goal and tools involved. Please leave out client names, records and confidential details in the first message. You can also find me on [LinkedIn](https://www.linkedin.com/in/lorenz-leslie-espinosa/).
