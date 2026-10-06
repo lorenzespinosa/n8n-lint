@@ -206,11 +206,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add new rules, run tests, and 
 5. Create test fixtures in `test/fixtures/valid/` and `test/fixtures/invalid/`
 6. Add test case in `test/rules/linter.test.js`
 
-## Related Projects
+## Scope and limits
 
-- [n8n-error-handling-pattern](https://github.com/lorenzespinosa/n8n-error-handling-pattern) — Error handling templates this linter validates
-- [n8n-legal-ops-templates](https://github.com/lorenzespinosa/n8n-legal-ops-templates) — Legal ops workflow templates
-- [n8n-ai-agent-delegator](https://github.com/lorenzespinosa/n8n-ai-agent-delegator) — Multi-agent AI system templates
+This is static analysis of workflow JSON, not a test of how an imported workflow behaves. Findings require review. A clean result does not establish that a workflow is secure, compliant, or ready for production.
 
 ## License
 
