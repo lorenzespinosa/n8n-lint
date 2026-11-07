@@ -1,0 +1,5 @@
+{
+  "name": "not-an-n8n-workflow",
+  "version": "1.0.0",
+  "description": "Plain JSON that is not a workflow, used to test the skip path"
+}
