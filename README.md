@@ -3,9 +3,9 @@
 [![CI](https://github.com/lorenzespinosa/n8n-lint/actions/workflows/ci.yml/badge.svg)](https://github.com/lorenzespinosa/n8n-lint/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org/)
-[![Tests](https://img.shields.io/badge/tests-231%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-279%20passing-brightgreen)]()
 
-**Static analysis for n8n workflow JSON files.** Catch credential leaks, deprecated nodes, schema errors, and best-practice violations before they hit production. 16 rules, shareable configs with profiles, CI-ready.
+**Static analysis for n8n workflow JSON files.** Catch credential leaks, deprecated nodes, schema errors, and best-practice violations before they hit production. 16 rules, shareable configs with profiles, three output formats, a GitHub Action, CI-ready.
 
 ---
 
@@ -42,8 +42,13 @@ n8n-lint ./workflows/
 # Auto-fix safe issues (strip instanceId, set active:false)
 n8n-lint --fix ./workflows/
 
-# JSON output for CI/scripting
+# Preview fixes as a unified diff without writing anything
+n8n-lint --fix-dry-run ./workflows/
+
+# Output formats: text (default), json, html
+n8n-lint --format text ./workflows/
 n8n-lint --format json ./workflows/
+n8n-lint --format html ./workflows/ > report.html
 
 # Errors only (quiet mode)
 n8n-lint --quiet ./workflows/
@@ -84,7 +89,64 @@ n8n-lint examples/clean-intake-workflow.json
 
 # Fails - 4 errors, 5 warnings across SEC, BP, and schema rules
 n8n-lint examples/flawed-intake-workflow.json
+
+# Same findings as a redirectable HTML report
+n8n-lint --format html examples/flawed-intake-workflow.json > report.html
 ```
+
+## Output Formats
+
+`--format <text|json|html>` selects the reporter. An unknown or missing value is a usage error (exit code 2).
+
+### text (default)
+
+Colored terminal output with one section per file and a summary line. This is what runs when no `--format` is given.
+
+### json
+
+A stable, documented findings array for CI and tooling:
+
+```json
+[
+  {
+    "file": "/abs/path/workflows/intake-form.json",
+    "issues": [
+      {
+        "ruleId": "SEC-01",
+        "severity": "error",
+        "message": "Possible Bearer token in node \"HTTP Request\": \"Bearer s...[REDACTED]\"",
+        "node": "HTTP Request",
+        "fix": null
+      }
+    ]
+  }
+]
+```
+
+Contract:
+
+| Field | Type | Notes |
+|---|---|---|
+| top level | array | one entry per non-skipped file, in input order |
+| `file` | string | absolute path of the workflow file |
+| `issues` | array | `[]` when the file is clean |
+| `issues[].ruleId` | string | rule id from the [Rule Reference](#rule-reference) |
+| `issues[].severity` | `"error"` or `"warning"` | after config, profile, and `--rule` overrides |
+| `issues[].message` | string | human-readable finding |
+| `issues[].node` | string or `null` | node name when the finding is node-scoped |
+| `issues[].fix` | string or `null` | manual fix hint; `null` when there is none |
+
+Files that are not n8n workflows (like `package.json`) are skipped and do not appear. The array is the only thing printed to stdout for a plain run, so `n8n-lint --format json . | jq` works. Changes to this shape within 3.x will be additive only; exit codes still tell severity: `1` when any issue has `severity: "error"`, `0` otherwise.
+
+### html
+
+One self-contained report on stdout: inline CSS, no scripts, no external resources. Redirect it to a file and open it anywhere:
+
+```bash
+n8n-lint --format html ./workflows/ > lint-report.html
+```
+
+The report shows a summary band (files checked, errors, warnings, skipped), one table per file with findings, and the list of clean files. All file paths, node names, and messages are HTML-escaped.
 
 ## Rule Reference
 
@@ -189,11 +251,61 @@ $ n8n-lint --print-config --rule BP-06=off
 | Root-level `id` present | Removed |
 | `active: true` | Set to `false` |
 
+Fixes are **idempotent**: every fix removes the condition that triggered it, so a second `--fix` run reports no changes and writes nothing. Fixed files are rewritten as pretty-printed JSON (2-space indent, trailing newline) through an atomic temp-file-and-rename.
+
+### Dry-run
+
+`--fix-dry-run` prints a unified diff of everything `--fix` would change and writes nothing. It wins over `--fix` and over `fix: true` in the config, so combining them is safe:
+
+```bash
+$ n8n-lint --fix-dry-run workflows/intake.json
+--- workflows/intake.json
++++ workflows/intake.json
+@@ -1,6 +1,5 @@
+ {
+-  "id": "wf_prod_8842",
+   "name": "Client Intake",
+-  "active": true,
++  "active": false,
+...
+```
+
+The lint pass still runs afterward on the unchanged files, so the exit code reflects the findings that remain.
+
+### Conflict-marker refusal
+
+Files containing unresolved merge conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`, `|||||||`) are refused in both `--fix` and `--fix-dry-run` mode with a `Fix error:` message, because rewriting a conflicted file could silently discard one side of the merge. Resolve the conflict first, then fix.
+
 Only non-destructive fixes are applied. Other rules require manual correction.
 
 ## CI Integration
 
-### GitHub Actions
+### GitHub Action
+
+The repo ships a composite action. It invokes the linter through `npx`, so consumers need no install step:
+
+```yaml
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: lorenzespinosa/n8n-lint@main
+        with:
+          workflows: 'workflows/**/*.json'
+          format: text
+```
+
+Inputs:
+
+| Input | Default | Description |
+|---|---|---|
+| `workflows` | `**/*.json` | Glob of workflow files to lint, relative to the repository root. Non-n8n JSON files are skipped automatically. |
+| `format` | `text` | Output format: `text`, `json`, or `html`. |
+
+The step fails when the linter exits non-zero: error-severity findings fail with exit code `1`, and misconfiguration (bad `format` value, a glob that matches nothing, invalid config) fails with exit code `2`. Warnings never fail the run. See [`.github/workflows/lint-example.yml`](.github/workflows/lint-example.yml) for a live example that lints this repository's `examples/` on push.
+
+### Manual step
 
 ```yaml
 name: Lint n8n Workflows
@@ -211,15 +323,13 @@ jobs:
       - run: npx github:lorenzespinosa/n8n-lint ./workflows/
 ```
 
-Exits with code `1` on errors and `2` on config problems, so CI fails the job automatically and the logs say which kind of failure happened. A `--print-config` step before the lint step makes the resolved rule set visible in CI logs.
-
 ### JSON Output for CI
 
 ```bash
 n8n-lint --format json ./workflows/ > lint-results.json
 ```
 
-Returns a JSON array of `{ file, issues: [{ ruleId, severity, message, node, fix }] }`.
+Returns the documented findings array described under [Output Formats](#output-formats).
 
 ## Exit Codes
 
@@ -227,7 +337,7 @@ Returns a JSON array of `{ file, issues: [{ ruleId, severity, message, node, fix
 |---|---|
 | `0` | No error-severity findings. Warnings never fail the run. |
 | `1` | One or more error-severity findings. Anything escalated to `error` (by a config entry, a profile, or `--rule`) counts. |
-| `2` | Usage or configuration errors: missing path, no JSON files found, missing `--config` file, or an invalid config (unknown rule id, bad severity value, unknown profile, unknown option key, invalid JSON). |
+| `2` | Usage or configuration errors: missing path, no JSON files found, missing `--config` file, an invalid config (unknown rule id, bad severity value, unknown profile, unknown option key, invalid JSON), or a missing/unknown `--format` value. |
 
 Findings exit `1` by severity rules and config problems exit `2`, so CI can tell "the workflows have problems" apart from "the linter is misconfigured".
 
@@ -245,15 +355,19 @@ graph LR
     G -- Yes --> I[Schema Rules]
     I --> J[Security Rules]
     J --> K[Best Practice Rules]
-    K --> L{--fix?}
-    L -- Yes --> M[Auto-Fix]
-    L -- No --> N[Reporter]
-    M --> N
-    N --> O{--format json?}
-    O -- Yes --> P[JSON Output]
-    O -- No --> Q[Colored Terminal]
-    P --> R[Exit Code]
-    Q --> R
+    K --> L{--fix or --fix-dry-run?}
+    L -- fix --> M[Auto-Fix]
+    L -- dry-run --> N[Unified Diff]
+    L -- No --> O[Reporter]
+    M --> O
+    N --> O
+    O --> P{--format?}
+    P -- json --> Q[JSON Output]
+    P -- html --> R[HTML Report]
+    P -- text --> S[Colored Terminal]
+    Q --> T[Exit Code]
+    R --> T
+    S --> T
 ```
 
 ## Contributing

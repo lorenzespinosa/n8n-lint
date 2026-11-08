@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.0.0] - 2026-11-07
+## [3.0.0] - 2026-11-08
 
 ### Added
 - `.n8nlintrc.json` discovery from the current working directory upward; the nearest file wins, and `--config PATH` still pins an exact file
@@ -11,11 +11,15 @@ All notable changes to this project are documented here. Format based on [Keep a
 - `--rule <id>=<off|warn|error>`: repeatable CLI rule override that wins over any config file entry
 - Strict config validation with clear `Config error:` messages and exit code 2: unknown rule ids, bad severity values, unknown profile names, unknown top-level keys, non-object roots, and invalid JSON
 - Central rule catalog in `src/rules/index.js`, shared by the linter, config validation, and profiles, so new rules join the packs automatically
+- `--format text|json|html` reporter selection: `text` is the existing terminal output, `json` prints the documented stable findings array (fields and semantics in the README), and `html` prints one self-contained report (inline CSS, no scripts, no external resources) that can be redirected to a file. Unknown or missing format values fail with exit code 2
+- Reusable GitHub Action (`action.yml`): a composite action that runs the linter via `npx` with a `workflows` glob input (default `**/*.json`) and a `format` input (default `text`); it fails the step on error-severity findings and on misconfiguration. `.github/workflows/lint-example.yml` demonstrates it by linting this repository's `examples/` on push
+- `--fix-dry-run`: prints a unified diff of everything `--fix` would change and writes nothing; it wins over `--fix` and over `fix: true` in the config. Backed by a dependency-free unified diff generator (`src/diff.js`)
+- `--fix` hardening: fixes are idempotent (a second run reports no changes and writes nothing), and files with unresolved merge conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`, `|||||||`) are refused in both fix and dry-run modes
 
 ### Changed
 - Rule severity precedence is now explicit: built-in severities, then profiles, then `rules` entries from the config file, then `--rule` flags
 - Exit code 2 now covers config errors as well as usage errors; findings still exit 1 purely by severity
-- Test count: 168 to 231 (config discovery, validation, profile composition, CLI precedence, and print-config coverage)
+- Test count: 168 to 279 (config discovery, validation, profile composition, CLI precedence, print-config, output formats and format validation, action/workflow YAML validation, fixer idempotence, dry-run diffs, and conflict-marker refusal coverage)
 
 ### Fixed
 - `npm test` only executed `test/rules/linter.test.js` because the `test/**/*.test.js` glob does not expand recursively in plain `sh`; the script now discovers every test file under `test/`

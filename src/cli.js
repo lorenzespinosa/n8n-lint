@@ -2,21 +2,39 @@
 
 import { Linter } from './linter.js';
 import { discoverFiles } from './utils.js';
-import { reportResults, reportJSON } from './reporter.js';
+import { reportResults, reportJSON, reportHTML } from './reporter.js';
 import { loadCliConfig, resolveRuleSettings, parseRuleFlag, ConfigError } from './config.js';
 import { fixFile } from './fixer.js';
 
 const args = process.argv.slice(2);
 
+/** Output formats accepted by --format. text is the default. */
+const FORMATS = ['text', 'json', 'html'];
+
 // Parse flags
 const flags = {
   quiet: args.includes('--quiet') || args.includes('-q'),
-  json: args.includes('--format') && args[args.indexOf('--format') + 1] === 'json',
   fix: args.includes('--fix'),
+  fixDryRun: args.includes('--fix-dry-run'),
   help: args.includes('--help') || args.includes('-h'),
   config: args.includes('--config') ? args[args.indexOf('--config') + 1] : null,
   printConfig: args.includes('--print-config'),
 };
+
+// Resolve --format <text|json|html>; a missing or unknown value is a usage error
+let format = 'text';
+if (args.includes('--format')) {
+  const value = args[args.indexOf('--format') + 1];
+  if (!value || value.startsWith('-')) {
+    console.error(`Usage error: --format expects one of: ${FORMATS.join(', ')}`);
+    process.exit(2);
+  }
+  if (!FORMATS.includes(value)) {
+    console.error(`Usage error: unknown format ${JSON.stringify(value)}. Expected one of: ${FORMATS.join(', ')}`);
+    process.exit(2);
+  }
+  format = value;
+}
 
 // Collect repeatable --rule values (validated after the help branch)
 const ruleFlagValues = [];
@@ -50,17 +68,32 @@ Examples:
   n8n-lint workflows/my-workflow.json
   n8n-lint workflows/
   n8n-lint .
+  n8n-lint --format json workflows/
+  n8n-lint --format html workflows/ > report.html
+  n8n-lint --fix-dry-run workflows/
   n8n-lint --print-config
   n8n-lint --rule BP-05=error workflows/
 
 Options:
   --quiet, -q          Show only errors
-  --format json        Output results as JSON
+  --format <type>      Output format: text (default), json, or html
   --fix                Auto-fix safe issues (strip instanceId, set active:false)
+  --fix-dry-run        Print a unified diff of what --fix would change; writes nothing
   --config <path>      Path to .n8nlintrc.json config file
   --rule <id>=<level>  Override one rule (repeatable), e.g. --rule BP-05=error
   --print-config       Print the resolved config as JSON and exit 0
   --help, -h           Show this help
+
+Output formats:
+  text   Colored terminal output with a summary line (default)
+  json   Stable array: [{ file, issues: [{ ruleId, severity, message, node, fix }] }]
+  html   One self-contained HTML report on stdout (inline CSS, no scripts)
+
+Auto-fix:
+  --fix is idempotent: a second run reports no changes and writes nothing.
+  --fix-dry-run wins over --fix and "fix": true, so nothing is ever written.
+  Files with unresolved merge conflict markers (<<<<<<<, =======, >>>>>>>)
+  are refused in both modes.
 
 Config (.n8nlintrc.json), discovered from the current directory upward:
   {
@@ -85,7 +118,7 @@ fail with exit code 2.
 Exit codes:
   0  no errors (warnings do not fail the run)
   1  one or more error-severity findings
-  2  config, argument, or file discovery errors
+  2  usage, config, or file errors (bad flags, invalid config, missing paths)
 
 Rules:
   SCHEMA-01  Valid JSON syntax
@@ -139,7 +172,7 @@ if (flags.printConfig) {
   process.exit(0);
 }
 
-// Merge --fix flag (CLI flag overrides config)
+// Merge --fix flag (CLI flag overrides config); --fix-dry-run never writes
 const shouldFix = flags.fix || config.fix;
 
 // Discover files
@@ -158,12 +191,16 @@ if (files.length === 0) {
   process.exit(2);
 }
 
-// Auto-fix pass (runs before lint so lint shows clean results)
-if (shouldFix) {
+// Auto-fix pass (runs before lint so lint shows clean results). In dry-run
+// mode the would-be changes are printed as a unified diff and nothing is
+// written, so the lint report below reflects the files as they are.
+if (shouldFix || flags.fixDryRun) {
   for (const file of files) {
-    const { fixed, changes, error } = fixFile(file);
+    const { fixed, changes, error, diff } = fixFile(file, { dryRun: flags.fixDryRun });
     if (error) {
       console.error(`Fix error (${file}): ${error}`);
+    } else if (flags.fixDryRun) {
+      if (diff) console.log(diff.trimEnd());
     } else if (fixed && !flags.quiet) {
       console.log(`Fixed: ${file}`);
       for (const change of changes) {
@@ -182,8 +219,10 @@ const allResults = linter.lintFiles(files);
 
 // Report
 let totalErrors;
-if (flags.json) {
+if (format === 'json') {
   ({ totalErrors } = reportJSON(allResults));
+} else if (format === 'html') {
+  ({ totalErrors } = reportHTML(allResults));
 } else {
   ({ totalErrors } = reportResults(allResults, { quiet: flags.quiet }));
 }
