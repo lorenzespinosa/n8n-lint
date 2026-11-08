@@ -3,7 +3,7 @@
 [![CI](https://github.com/lorenzespinosa/n8n-lint/actions/workflows/ci.yml/badge.svg)](https://github.com/lorenzespinosa/n8n-lint/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org/)
-[![Tests](https://img.shields.io/badge/tests-279%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-281%20passing-brightgreen)](https://github.com/lorenzespinosa/n8n-lint/actions/workflows/ci.yml)
 
 **Static analysis for n8n workflow JSON files.** Catch credential leaks, deprecated nodes, schema errors, and best-practice violations before they hit production. 16 rules, shareable configs with profiles, three output formats, a GitHub Action, CI-ready.
 
