@@ -65,7 +65,7 @@ import bp05 from './bp-05.js';
 export default [activeFlag, deprecatedNodes, orphanedNodes, duplicateNames, bp05];
 ```
 
-Each category index exports a default array of rule objects. Import your rule and add it to the array.
+Each category index exports a default array of rule objects. Import your rule and add it to the array. The central catalog in `src/rules/index.js` picks it up automatically, so the new rule also joins the `strict` and `security` profile packs and `--print-config` output.
 
 ### 3. Add test fixtures
 

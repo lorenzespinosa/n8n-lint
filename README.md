@@ -3,9 +3,9 @@
 [![CI](https://github.com/lorenzespinosa/n8n-lint/actions/workflows/ci.yml/badge.svg)](https://github.com/lorenzespinosa/n8n-lint/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org/)
-[![Tests](https://img.shields.io/badge/tests-21%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-231%20passing-brightgreen)]()
 
-**Static analysis for n8n workflow JSON files.** Catch credential leaks, deprecated nodes, schema errors, and best-practice violations before they hit production. 16 rules, zero config required, CI-ready.
+**Static analysis for n8n workflow JSON files.** Catch credential leaks, deprecated nodes, schema errors, and best-practice violations before they hit production. 16 rules, shareable configs with profiles, CI-ready.
 
 ---
 
@@ -48,8 +48,14 @@ n8n-lint --format json ./workflows/
 # Errors only (quiet mode)
 n8n-lint --quiet ./workflows/
 
-# Custom config
-n8n-lint --config .n8nlintrc.json ./workflows/
+# Override one rule without editing the config (repeatable)
+n8n-lint --rule BP-05=error ./workflows/
+
+# Print the resolved config (file + profiles + CLI flags) for CI debugging
+n8n-lint --print-config
+
+# Custom config path (skips discovery)
+n8n-lint --config path/to/.n8nlintrc.json ./workflows/
 ```
 
 ### Sample Output
@@ -73,10 +79,10 @@ workflows/valid-workflow.json
 The [`examples/`](examples/) directory has a clean workflow and an intentionally-flawed one:
 
 ```bash
-# Passes — exits 0
+# Passes - exits 0
 n8n-lint examples/clean-intake-workflow.json
 
-# Fails — 4 errors, 5 warnings across SEC, BP, and schema rules
+# Fails - 4 errors, 5 warnings across SEC, BP, and schema rules
 n8n-lint examples/flawed-intake-workflow.json
 ```
 
@@ -84,39 +90,94 @@ n8n-lint examples/flawed-intake-workflow.json
 
 | ID | Severity | Category | Description | Fixable |
 |---|---|---|---|---|
-| **SCHEMA-01** | error | Schema | Invalid JSON syntax | — |
-| **SCHEMA-02** | error | Schema | Missing required top-level fields (`name`, `nodes`, `connections`, `active`) | — |
-| **SCHEMA-03** | error | Schema | Missing required node fields (`id`, `name`, `type`, `typeVersion`, `position`) | — |
-| **SCHEMA-04** | error | Schema | Connection references a non-existent node | — |
-| **SEC-01** | error | Security | Hardcoded credentials, API keys, or tokens in node parameters | — |
-| **SEC-02** | error | Security | `meta.instanceId` present — leaks server identity | ✅ `--fix` |
-| **SEC-03** | warning | Security | Root-level `id` field — instance-specific, not portable | ✅ `--fix` |
-| **SEC-04** | error | Security | URL contains auth tokens in query parameters | — |
-| **SEC-05** | warning | Security | Credential names/IDs leak internal naming | — |
-| **BP-01** | error | Best Practice | `active: true` — templates should be `false` | ✅ `--fix` |
-| **BP-02** | warning | Best Practice | Deprecated `Function` node — use `Code` node | — |
-| **BP-03** | warning | Best Practice | Orphaned node with no connections | — |
-| **BP-04** | error | Best Practice | Duplicate node names in same workflow | — |
-| **BP-05** | warning | Best Practice | HTTP Request without error handling (`continueOnFail` or error workflow) | — |
-| **BP-06** | warning | Best Practice | Large workflow (>50 nodes) — decompose into sub-workflows | — |
-| **BP-07** | warning | Best Practice | Potential infinite loop — cycle detected without IF/Switch termination | — |
+| **SCHEMA-01** | error | Schema | Invalid JSON syntax | - |
+| **SCHEMA-02** | error | Schema | Missing required top-level fields (`name`, `nodes`, `connections`, `active`) | - |
+| **SCHEMA-03** | error | Schema | Missing required node fields (`id`, `name`, `type`, `typeVersion`, `position`) | - |
+| **SCHEMA-04** | error | Schema | Connection references a non-existent node | - |
+| **SEC-01** | error | Security | Hardcoded credentials, API keys, or tokens in node parameters | - |
+| **SEC-02** | error | Security | `meta.instanceId` present - leaks server identity | ✅ `--fix` |
+| **SEC-03** | warning | Security | Root-level `id` field - instance-specific, not portable | ✅ `--fix` |
+| **SEC-04** | error | Security | URL contains auth tokens in query parameters | - |
+| **SEC-05** | warning | Security | Credential names/IDs leak internal naming | - |
+| **BP-01** | error | Best Practice | `active: true` - templates should be `false` | ✅ `--fix` |
+| **BP-02** | warning | Best Practice | Deprecated `Function` node - use `Code` node | - |
+| **BP-03** | warning | Best Practice | Orphaned node with no connections | - |
+| **BP-04** | error | Best Practice | Duplicate node names in same workflow | - |
+| **BP-05** | warning | Best Practice | HTTP Request without error handling (`continueOnFail` or error workflow) | - |
+| **BP-06** | warning | Best Practice | Large workflow (>50 nodes) - decompose into sub-workflows | - |
+| **BP-07** | warning | Best Practice | Potential infinite loop - cycle detected without IF/Switch termination | - |
 
 ## Configuration
 
-Create `.n8nlintrc.json` in your project root:
+Create a `.n8nlintrc.json` file. It is discovered automatically from the current working directory upward (the nearest one wins), so a single config at the repo root covers every command run inside it. Pass `--config PATH` to use a specific file instead of discovery.
+
+### Full example
 
 ```json
 {
+  "profiles": ["strict"],
   "rules": {
     "SEC-03": "off",
-    "SEC-05": "off",
     "BP-03": "warn",
     "BP-06": "error"
+  },
+  "fix": false
+}
+```
+
+### Schema
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `profiles` | array of strings | `[]` | Rule packs to apply, in order. See the table below. |
+| `rules` | object | `{}` | Per-rule severity: `"off"`, `"warn"`, or `"error"`. Keys are rule ids from the [Rule Reference](#rule-reference). |
+| `fix` | boolean | `false` | Same as passing `--fix`. The CLI flag still wins when both are set. |
+
+Validation is strict. Unknown rule ids, bad severity values, unknown profile names, unknown option keys, or a config that is not valid JSON all fail with a clear `Config error:` message and exit code `2`. One exception: `SCHEMA-01` (JSON syntax) always runs and cannot be configured, because every other check depends on parsing.
+
+### Profiles
+
+| Profile | Intent |
+|---|---|
+| `default` | Built-in severities for every rule; same as running with no config. |
+| `strict` | Every rule is reported as an error, including rules that normally warn. |
+| `security` | Only the security category is checked, all as errors (plus `SCHEMA-01`, which always runs). |
+
+Profiles compose: list several and they apply in order, so later entries win for the same rule. Explicit `rules` entries always win over profiles, and `--rule` flags win over everything.
+
+```
+built-in severities  <  profiles  <  rules entries  <  --rule flags
+```
+
+Example: `strict` everywhere, but keep large-workflow warnings out of the failure count and turn the root-id check off:
+
+```json
+{
+  "profiles": ["strict"],
+  "rules": { "BP-06": "warn", "SEC-03": "off" }
+}
+```
+
+### Checking the resolved config
+
+`--print-config` prints the effective config after discovery, profiles, file entries, and CLI flags are merged, then exits `0` without linting. Useful in CI logs:
+
+```bash
+$ n8n-lint --print-config --rule BP-06=off
+{
+  "configFile": "/repo/.n8nlintrc.json",
+  "profiles": ["strict"],
+  "fix": false,
+  "rules": {
+    "BP-01": "error",
+    "BP-02": "error",
+    "...": "...",
+    "SEC-04": "error"
   }
 }
 ```
 
-Values: `"error"`, `"warn"` / `"warning"`, `"off"` / `false`
+`configFile` is `null` when no config file was found and built-in defaults apply.
 
 ## Auto-Fix
 
@@ -150,7 +211,7 @@ jobs:
       - run: npx github:lorenzespinosa/n8n-lint ./workflows/
 ```
 
-Exits with code `1` on errors — fails the CI job automatically.
+Exits with code `1` on errors and `2` on config problems, so CI fails the job automatically and the logs say which kind of failure happened. A `--print-config` step before the lint step makes the resolved rule set visible in CI logs.
 
 ### JSON Output for CI
 
@@ -164,9 +225,11 @@ Returns a JSON array of `{ file, issues: [{ ruleId, severity, message, node, fix
 
 | Code | Meaning |
 |---|---|
-| `0` | All files passed (warnings are non-blocking) |
-| `1` | One or more errors found |
-| `2` | Invalid arguments or no files found |
+| `0` | No error-severity findings. Warnings never fail the run. |
+| `1` | One or more error-severity findings. Anything escalated to `error` (by a config entry, a profile, or `--rule`) counts. |
+| `2` | Usage or configuration errors: missing path, no JSON files found, missing `--config` file, or an invalid config (unknown rule id, bad severity value, unknown profile, unknown option key, invalid JSON). |
+
+Findings exit `1` by severity rules and config problems exit `2`, so CI can tell "the workflows have problems" apart from "the linter is misconfigured".
 
 ## Architecture
 
@@ -202,7 +265,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add new rules, run tests, and 
 1. Create `src/rules/<category>/your-rule.js`
 2. Export `{ id, severity, description, check(workflow) }`
 3. `check()` returns `[{ message, node?, fix? }]`
-4. Add to category's `index.js` export array
+4. Add to category's `index.js` export array (the catalog in `src/rules/index.js` picks it up automatically, including profile packs)
 5. Create test fixtures in `test/fixtures/valid/` and `test/fixtures/invalid/`
 6. Add test case in `test/rules/linter.test.js`
 

@@ -2,6 +2,29 @@
 
 All notable changes to this project are documented here. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2026-11-07
+
+### Added
+- `.n8nlintrc.json` discovery from the current working directory upward; the nearest file wins, and `--config PATH` still pins an exact file
+- Profiles as rule packs: `default` (built-in severities), `strict` (every rule an error, including rules that normally warn), and `security` (only security rules, all errors). Multiple profiles compose in the order listed
+- `--print-config`: prints the resolved config (discovered file + profiles + CLI overrides) as JSON and exits 0, for CI-friendly debugging
+- `--rule <id>=<off|warn|error>`: repeatable CLI rule override that wins over any config file entry
+- Strict config validation with clear `Config error:` messages and exit code 2: unknown rule ids, bad severity values, unknown profile names, unknown top-level keys, non-object roots, and invalid JSON
+- Central rule catalog in `src/rules/index.js`, shared by the linter, config validation, and profiles, so new rules join the packs automatically
+
+### Changed
+- Rule severity precedence is now explicit: built-in severities, then profiles, then `rules` entries from the config file, then `--rule` flags
+- Exit code 2 now covers config errors as well as usage errors; findings still exit 1 purely by severity
+- Test count: 168 to 231 (config discovery, validation, profile composition, CLI precedence, and print-config coverage)
+
+### Fixed
+- `npm test` only executed `test/rules/linter.test.js` because the `test/**/*.test.js` glob does not expand recursively in plain `sh`; the script now discovers every test file under `test/`
+
+### Breaking
+- Severity values in config files must now be exactly `"off"`, `"warn"`, or `"error"`. The legacy `"warning"` and `false` values are rejected with exit code 2
+- Unknown top-level config keys are rejected instead of silently ignored
+- `SCHEMA-01` (JSON syntax) cannot be disabled or re-leveled, since parsing happens before rule evaluation; configuring it is a config error
+
 ## [1.3.0] - 2025-08-12
 
 ### Added
