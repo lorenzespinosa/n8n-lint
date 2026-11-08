@@ -1,14 +1,14 @@
 {
   "name": "n8n-lint",
-  "version": "1.3.0",
-  "description": "CLI linter for n8n workflow JSON files — catches credential leaks, deprecated nodes, missing error handling, and best-practice violations",
+  "version": "3.0.0",
+  "description": "CLI linter for n8n workflow JSON files: catches credential leaks, deprecated nodes, missing error handling, and best-practice violations",
   "type": "module",
   "main": "src/linter.js",
   "bin": {
     "n8n-lint": "src/cli.js"
   },
   "scripts": {
-    "test": "node --test test/**/*.test.js",
+    "test": "find test -name '*.test.js' -print0 | xargs -0 node --test",
     "lint": "node src/cli.js ."
   },
   "keywords": [

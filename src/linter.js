@@ -1,11 +1,9 @@
 import { parseJSON, isN8nWorkflow } from './utils.js';
-import schemaRules from './rules/schema/index.js';
-import securityRules from './rules/security/index.js';
-import bestPracticeRules from './rules/best-practices/index.js';
+import allRules from './rules/index.js';
 
 export class Linter {
   constructor(options = {}) {
-    this.rules = [...schemaRules, ...securityRules, ...bestPracticeRules];
+    this.rules = [...allRules];
     this.disabledRules = new Set(options.disabledRules || []);
     this.severityOverrides = options.severityOverrides || new Map();
   }

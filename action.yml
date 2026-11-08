@@ -1,0 +1,32 @@
+name: 'n8n-lint'
+description: 'Lint n8n workflow JSON files for credential leaks, deprecated nodes, schema errors, and best-practice violations'
+
+inputs:
+  workflows:
+    description: 'Glob of workflow files to lint, relative to the repository root'
+    required: false
+    default: '**/*.json'
+  format:
+    description: 'Output format: text, json, or html'
+    required: false
+    default: 'text'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Run n8n-lint
+      shell: bash
+      env:
+        # inputs reach the shell only through the environment, never interpolated
+        # into the script text (avoids command injection via crafted inputs)
+        WORKFLOWS: ${{ inputs.workflows }}
+        FORMAT: ${{ inputs.format }}
+      run: |
+        shopt -s globstar nullglob
+        files=($WORKFLOWS)
+        if [ ${#files[@]} -eq 0 ]; then
+          echo "n8n-lint: no files matched '$WORKFLOWS'"
+          exit 2
+        fi
+        # run the exact revision the action was invoked at, not the default branch
+        npx --yes "github:lorenzespinosa/n8n-lint#${{ github.action_ref }}" --format "$FORMAT" "${files[@]}"
