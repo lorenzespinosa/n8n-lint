@@ -326,11 +326,10 @@ describe('cli: fix and json reporting in one run', () => {
     writeFileSync(broken, '{ "name": ');
 
     const { exitCode, stdout, stderr } = await runCli(['--fix', '--format', 'json', scanDir]);
-    assert.equal(exitCode, 1, 'broken JSON still lints as a SCHEMA-01 error after the fix pass');
+    assert.equal(exitCode, 2, 'a failed fix pass is a file error (exit 2), even when findings exist');
     assert.match(stderr, /Fix error \(.*broken\.json\): Invalid JSON/);
-    // reportJSON prints the array as the final log line; earlier lines carry
-    // the Fixed: progress output from the fix pass.
-    const parsed = JSON.parse(stdout.substring(stdout.indexOf('[')));
+    // fix diagnostics go to stderr; stdout is the JSON array and parses whole
+    const parsed = JSON.parse(stdout);
     const entry = parsed.find(f => f.file === fixable);
     assert.ok(entry, 'fixed file appears in JSON output');
     assert.equal(entry.issues.length, 0);

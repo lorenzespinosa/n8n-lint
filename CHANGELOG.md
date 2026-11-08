@@ -19,7 +19,7 @@ All notable changes to this project are documented here. Format based on [Keep a
 ### Changed
 - Rule severity precedence is now explicit: built-in severities, then profiles, then `rules` entries from the config file, then `--rule` flags
 - Exit code 2 now covers config errors as well as usage errors; findings still exit 1 purely by severity
-- Test count: 168 to 279 (config discovery, validation, profile composition, CLI precedence, print-config, output formats and format validation, action/workflow YAML validation, fixer idempotence, dry-run diffs, and conflict-marker refusal coverage)
+- Test count: 21 to 279 (config discovery, validation, profile composition, CLI precedence, print-config, output formats and format validation, action/workflow YAML validation, fixer idempotence, dry-run diffs, and conflict-marker refusal coverage)
 
 ### Fixed
 - `npm test` only executed `test/rules/linter.test.js` because the `test/**/*.test.js` glob does not expand recursively in plain `sh`; the script now discovers every test file under `test/`

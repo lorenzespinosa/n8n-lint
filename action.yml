@@ -16,11 +16,17 @@ runs:
   steps:
     - name: Run n8n-lint
       shell: bash
+      env:
+        # inputs reach the shell only through the environment, never interpolated
+        # into the script text (avoids command injection via crafted inputs)
+        WORKFLOWS: ${{ inputs.workflows }}
+        FORMAT: ${{ inputs.format }}
       run: |
         shopt -s globstar nullglob
-        files=(${{ inputs.workflows }})
+        files=($WORKFLOWS)
         if [ ${#files[@]} -eq 0 ]; then
-          echo "n8n-lint: no files matched '${{ inputs.workflows }}'"
+          echo "n8n-lint: no files matched '$WORKFLOWS'"
           exit 2
         fi
-        npx --yes github:lorenzespinosa/n8n-lint --format '${{ inputs.format }}' "${files[@]}"
+        # run the exact revision the action was invoked at, not the default branch
+        npx --yes "github:lorenzespinosa/n8n-lint#${{ github.action_ref }}" --format "$FORMAT" "${files[@]}"

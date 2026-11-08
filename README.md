@@ -337,7 +337,7 @@ Returns the documented findings array described under [Output Formats](#output-f
 |---|---|
 | `0` | No error-severity findings. Warnings never fail the run. |
 | `1` | One or more error-severity findings. Anything escalated to `error` (by a config entry, a profile, or `--rule`) counts. |
-| `2` | Usage or configuration errors: missing path, no JSON files found, missing `--config` file, an invalid config (unknown rule id, bad severity value, unknown profile, unknown option key, invalid JSON), or a missing/unknown `--format` value. |
+| `2` | Usage or configuration errors: missing path, no JSON files found, missing `--config` file, an invalid config (unknown rule id, bad severity value, unknown profile, unknown option key, invalid JSON), a missing/unknown `--format` value, or a failed auto-fix pass (unreadable or unfixable files). |
 
 Findings exit `1` by severity rules and config problems exit `2`, so CI can tell "the workflows have problems" apart from "the linter is misconfigured".
 
@@ -347,7 +347,12 @@ Findings exit `1` by severity rules and config problems exit `2`, so CI can tell
 graph LR
     A[CLI Entry] --> B[Config Loader]
     B --> C[File Discovery]
-    C --> D[JSON Parse]
+    C --> L{--fix or --fix-dry-run?}
+    L -- fix --> M[Auto-Fix]
+    L -- dry-run --> N[Unified Diff]
+    L -- No --> D[JSON Parse]
+    M --> D
+    N --> D
     D --> E{Valid JSON?}
     E -- No --> F[SCHEMA-01]
     E -- Yes --> G{n8n Workflow?}
@@ -355,12 +360,7 @@ graph LR
     G -- Yes --> I[Schema Rules]
     I --> J[Security Rules]
     J --> K[Best Practice Rules]
-    K --> L{--fix or --fix-dry-run?}
-    L -- fix --> M[Auto-Fix]
-    L -- dry-run --> N[Unified Diff]
-    L -- No --> O[Reporter]
-    M --> O
-    N --> O
+    K --> O[Reporter]
     O --> P{--format?}
     P -- json --> Q[JSON Output]
     P -- html --> R[HTML Report]

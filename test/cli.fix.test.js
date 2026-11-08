@@ -167,8 +167,9 @@ describe('cli: conflict-marker refusal', () => {
 
     assert.match(stderr, new RegExp(`Fix error \\(${file.replace(/[/\\]/g, '\\$&')}\\): Unresolved merge conflict markers`));
     assert.equal(readFileSync(file, 'utf-8'), before, 'the conflicted file was not touched');
-    // The conflicted file is invalid JSON, so linting still reports SCHEMA-01
-    assert.equal(exitCode, 1);
+    // The conflicted file is invalid JSON, so linting still reports SCHEMA-01;
+    // the failed fix pass is an operational error and exits 2
+    assert.equal(exitCode, 2);
     assert.match(stdout, /SCHEMA-01/);
   });
 });

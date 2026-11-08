@@ -25,7 +25,9 @@ const knownRuleList = ruleCatalog.map(rule => rule.id).join(', ');
 export const PROFILES = {
   default: {
     description: 'Built-in severities for every rule (same as running with no config).',
-    rules: {},
+    // populated from the catalog so a later "default" in the profiles list
+    // restores built-in severities after e.g. "strict"
+    rules: Object.fromEntries(ruleCatalog.map(rule => [rule.id, toConfigSeverity(rule.severity)])),
   },
   strict: {
     description: 'Every rule is reported as an error.',
@@ -63,15 +65,23 @@ export class ConfigError extends Error {
  * returns the absolute path of the first match, or null.
  */
 export function discoverConfigPath(startDir = process.cwd(), stopDir = null) {
-  let dir = resolve(startDir);
-  // symlink-safe stop comparison (macOS /var/folders -> /private/var/folders) without
-  // changing the spelling of the path we return
-  const stop = stopDir ? realpathSync(resolve(stopDir)) : parsePath(realpathSync(dir)).root;
+  // Walk canonical (realpath) directories: lexical dirname() can climb out of a
+  // symlinked path and escape the requested stop boundary.
+  let dir;
+  try {
+    dir = realpathSync(resolve(startDir));
+  } catch {
+    return null; // nonexistent start directory: nothing to discover
+  }
+  const stop = stopDir ? realpathSync(resolve(stopDir)) : parsePath(dir).root;
+  // a stop that is not an ancestor of the start can never be reached; refuse
+  // rather than search outside the requested boundary
+  if (stop !== dir && !dir.startsWith(stop === '/' ? '/' : stop + '/')) return null;
 
   for (;;) {
     const candidate = join(dir, CONFIG_FILENAME);
     if (existsSync(candidate)) return candidate;
-    if (realpathSync(dir) === stop) return null;
+    if (dir === stop) return null;
     const parent = dirname(dir);
     if (parent === dir) return null;
     dir = parent;

@@ -158,17 +158,19 @@ describe('action.yml', () => {
     const step = action.runs.steps[0];
     assert.equal(step.shell, 'bash');
     assert.ok(step.name);
-    assert.ok(step.run.includes('npx --yes github:lorenzespinosa/n8n-lint'), 'invokes the linter through npx');
-    assert.ok(step.run.includes('--format'), 'forwards the format input');
-    assert.ok(step.run.includes('${{ inputs.workflows }}'), 'forwards the workflows input');
+    assert.ok(step.run.includes('github:lorenzespinosa/n8n-lint#${{ github.action_ref }}'), 'pins npx to the exact action revision');
+    assert.ok(step.env && step.env.WORKFLOWS.includes('${{ inputs.workflows }}'), 'forwards the workflows input through env');
+    assert.ok(step.env && step.env.FORMAT.includes('${{ inputs.format }}'), 'forwards the format input through env');
     assert.ok(step.run.includes('exit 2'), 'fails the step when the glob matches nothing');
     // Exit codes propagate: error findings (1) and usage/config errors (2)
     // both fail the step, warnings do not.
   });
 
-  it('should quote the format input to keep it a single argument', () => {
+  it('expands the format through an env var, never inside the script text', () => {
     const action = parseYaml(raw);
-    assert.ok(action.runs.steps[0].run.includes(`--format '\${{ inputs.format }}'`));
+    const step = action.runs.steps[0];
+    assert.ok(step.run.includes('--format "$FORMAT"'));
+    assert.ok(!step.run.includes('inputs.format'), 'inputs must not be interpolated into the run script');
   });
 });
 

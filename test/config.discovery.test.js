@@ -33,7 +33,7 @@ describe('discoverConfigPath', () => {
     const project = join(root, 'here');
     mkdirSync(project);
     const filePath = writeConfigAt(project, { fix: true });
-    assert.equal(discoverConfigPath(project, root), filePath);
+    assert.equal(realpathSync(discoverConfigPath(project, root)), realpathSync(filePath));
   });
 
   it('finds the config in a parent directory', () => {
@@ -41,7 +41,7 @@ describe('discoverConfigPath', () => {
     const deep = join(project, 'a', 'b', 'c');
     mkdirSync(deep, { recursive: true });
     const filePath = writeConfigAt(project, { fix: true });
-    assert.equal(discoverConfigPath(deep, root), filePath);
+    assert.equal(realpathSync(discoverConfigPath(deep, root)), realpathSync(filePath));
   });
 
   it('prefers the nearest config over a farther one', () => {
@@ -50,7 +50,7 @@ describe('discoverConfigPath', () => {
     mkdirSync(nested, { recursive: true });
     writeConfigAt(project, { fix: true });
     const nestedPath = writeConfigAt(nested, { fix: false });
-    assert.equal(discoverConfigPath(nested, root), nestedPath);
+    assert.equal(realpathSync(discoverConfigPath(nested, root)), realpathSync(nestedPath));
   });
 
   it('returns null when no config exists up to the stop directory', () => {
@@ -79,6 +79,15 @@ describe('discoverConfigPath', () => {
     } finally {
       process.chdir(originalCwd);
     }
+  });
+
+  it('refuses a stopDir that is not an ancestor of the start', () => {
+    // a sibling start dir: honoring the stop means refusing, not searching above it
+    const elsewhere = join(root, 'elsewhere');
+    mkdirSync(elsewhere);
+    const stop = join(root, 'stop-only');
+    mkdirSync(stop);
+    assert.equal(discoverConfigPath(elsewhere, stop), null);
   });
 });
 

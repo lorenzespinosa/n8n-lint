@@ -15,8 +15,13 @@ describe('profile packs', () => {
     }
   });
 
-  it('default changes nothing', () => {
-    assert.deepEqual(PROFILES.default.rules, {});
+  it('default maps every rule to its built-in severity (changes nothing)', () => {
+    const expected = Object.fromEntries(
+      ruleCatalog.map(rule => [rule.id, rule.severity === 'warning' ? 'warn' : rule.severity])
+    );
+    assert.deepEqual(PROFILES.default.rules, expected);
+    const { rules } = resolveRuleSettings({ profiles: ['default'] });
+    assert.deepEqual(rules, expected, 'applying default alone equals built-ins');
   });
 
   it('strict maps every rule to error', () => {
@@ -127,5 +132,14 @@ describe('resolveRuleSettings', () => {
     });
     assert.equal(rules['BP-01'], 'warn', 'file entry revives a rule the profile turned off');
     assert.equal(rules['BP-03'], 'off', 'other non-security rules stay off');
+  });
+
+  it('a later default profile restores built-in severities after strict', () => {
+    const { rules } = resolveRuleSettings({ profiles: ['strict', 'default'] });
+    const catalog = ruleCatalog;
+    for (const rule of catalog) {
+      const builtin = rule.severity === 'warning' ? 'warn' : rule.severity;
+      assert.equal(rules[rule.id], builtin, `${rule.id} back to built-in ${builtin}`);
+    }
   });
 });

@@ -48,6 +48,15 @@ for (let i = 0; i < args.length; i++) {
   ruleFlagValues.push(value);
 }
 
+// Resolve --config <path>; a missing value is a usage error, not silent discovery
+if (args.includes('--config')) {
+  const value = args[args.indexOf('--config') + 1];
+  if (!value || value.startsWith('-')) {
+    console.error('Usage error: --config expects a file path');
+    process.exit(2);
+  }
+}
+
 // Remove flags from args to get paths
 const flagsWithValues = new Set(['--format', '--config', '--rule']);
 const paths = args.filter((a, i) => {
@@ -194,17 +203,21 @@ if (files.length === 0) {
 // Auto-fix pass (runs before lint so lint shows clean results). In dry-run
 // mode the would-be changes are printed as a unified diff and nothing is
 // written, so the lint report below reflects the files as they are.
+// Fix diagnostics go to stderr under json/html so machine output stays parseable.
+let hadFixError = false;
 if (shouldFix || flags.fixDryRun) {
+  const emit = format === 'text' ? console.log : console.error;
   for (const file of files) {
     const { fixed, changes, error, diff } = fixFile(file, { dryRun: flags.fixDryRun });
     if (error) {
+      hadFixError = true;
       console.error(`Fix error (${file}): ${error}`);
     } else if (flags.fixDryRun) {
-      if (diff) console.log(diff.trimEnd());
+      if (diff) emit(diff.trimEnd());
     } else if (fixed && !flags.quiet) {
-      console.log(`Fixed: ${file}`);
+      emit(`Fixed: ${file}`);
       for (const change of changes) {
-        console.log(`  → ${change}`);
+        emit(`  → ${change}`);
       }
     }
   }
@@ -227,5 +240,6 @@ if (format === 'json') {
   ({ totalErrors } = reportResults(allResults, { quiet: flags.quiet }));
 }
 
-// Exit code
-process.exit(totalErrors > 0 ? 1 : 0);
+// Exit code: a failed fix pass is an operational (file) error and wins over
+// finding counts, matching the documented exit-2 contract.
+process.exit(hadFixError ? 2 : totalErrors > 0 ? 1 : 0);
